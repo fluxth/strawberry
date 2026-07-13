@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
 
@@ -782,12 +783,14 @@ jobs:
     name: Build macOS Public
     if: (github.event_name == 'push' && github.repository == 'strawberrymusicplayer/strawberry' && github.ref_name != 'l10n_master') ||
         (github.event_name == 'pull_request' && github.head_ref != 'l10n_master') ||
-        (github.event_name == 'release')
+        (github.event_name == 'release') ||
+        (github.event_name == 'push' && github.repository != 'strawberrymusicplayer/strawberry' && github.ref == 'refs/heads/master') ||
+        (github.event_name == 'workflow_dispatch' && github.repository != 'strawberrymusicplayer/strawberry')
 
     strategy:
       fail-fast: false
       matrix:
-        runner: [ 'macos-15-intel', 'macos-15' ]
+        runner: [ 'macos-15' ]
         buildtype: [ 'release' ]
 
     runs-on: ${{ matrix.runner }}
@@ -911,6 +914,12 @@ jobs:
       - name: Create DMG
         working-directory: build
         run: make dmg
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strawberry-macos-${{env.arch}}
+          path: build/*.dmg
 
       - name: SSH Setup
         if: github.repository == 'strawberrymusicplayer/strawberry' && (github.event_name == 'release' || (github.event_name == 'push' && github.event.pull_request.head.repo.fork == false && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/ci' || github.ref == 'refs/heads/macos')))
